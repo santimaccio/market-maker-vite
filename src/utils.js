@@ -1,48 +1,40 @@
-// ====================== UTILITY FUNCTIONS ======================
-
-/**
- * Extrae el ID de un video de YouTube desde varios formatos de URL.
- * @param {string} url - URL de YouTube
- * @returns {string|null} - ID del video o null
- */
+// Extract YouTube video ID from URL
 export function parseYouTubeId(url) {
   if (!url) return null;
-  const m = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/embed\/|youtu\.be\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/)
-    || url.match(/^([a-zA-Z0-9_-]{11})$/);
-  return m ? m[1] : null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/,
+    /youtube\.com\/embed\/([^&\n?#]+)/
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) return match[1];
+  }
+  return null;
 }
 
-/**
- * Formatea un número como moneda argentina.
- * @param {number} n
- * @returns {string}
- */
-export function fmtMoney(n) {
-  if (n == null || isNaN(n)) return '$0';
-  return '$' + Math.round(n).toLocaleString('es-AR');
+// Format number as currency
+export function fmtMoney(num) {
+  if (typeof num !== 'number') return '—';
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(num);
 }
 
-/**
- * Formatea un porcentaje con signo.
- * @param {number} n
- * @returns {string}
- */
-export function fmtPct(n) {
-  if (n == null || isNaN(n)) return '0.0%';
-  return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+// Format number as percentage
+export function fmtPct(num) {
+  if (typeof num !== 'number') return '—';
+  const sign = num > 0 ? '+' : '';
+  return `${sign}${num.toFixed(2)}%`;
 }
 
-/**
- * Debounce — envuelve un callback para que solo se ejecute
- * tras `delay` ms sin nuevas invocaciones.
- * @param {Function} callback
- * @param {number} delay
- * @returns {Function}
- */
-export function debounce(callback, delay = 250) {
+// Simple debounce utility
+export function debounce(fn, delay) {
   let timeoutId;
-  return (...args) => {
+  return function debounced(...args) {
     clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => callback(...args), delay);
+    timeoutId = setTimeout(() => fn(...args), delay);
   };
 }
