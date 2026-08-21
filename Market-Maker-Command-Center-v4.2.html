@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Maker Command Center — Simulador Bursátil Santiagueño v4.2</title>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --panel: #151b26;
+      --panel2: #0f1520;
+      --border: #1e293b;
+      --border2: #243044;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --zinc: #71717a;
+      --cyan: #22d3ee;
+      --orange: #fb923c;
+      --lime: #a3e635;
+      --green: #34d399;
+      --red: #f87171;
+      --amber: #fbbf24;
+      --purple: #a78bfa;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; border: none; background: transparent; }
+    input, select, textarea {
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 8px 12px;
+      outline: none;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus { border-color: rgba(34, 211, 238, 0.5); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid rgba(30, 41, 59, 0.5); text-align: left; }
+    th { color: var(--zinc); font-size: 10px; letter-spacing: 0.1em; font-weight: 600; text-transform: uppercase; background: var(--panel2); }
+    td.num, th.num { text-align: right; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .header {
+      position: sticky; top: 0; z-index: 40;
+      background: rgba(10, 14, 20, 0.9);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-top {
+      max-width: 1600px; margin: 0 auto;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--cyan), var(--lime));
+      color: #000; font-weight: 900; font-size: 14px;
+      display: grid; place-items: center;
+    }
+    .brand h1 { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; }
+    .brand .sub { font-size: 10px; color: var(--zinc); letter-spacing: 0.05em; margin-top: 2px; }
+    .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .round-badge {
+      font-family: ui-monospace, monospace; font-weight: 700; font-size: 13px;
+      padding: 6px 14px; border-radius: 999px;
+      background: var(--panel); border: 1px solid var(--border2);
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px; border-radius: 999px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+      border: 1px solid var(--border2); background: var(--panel2); color: var(--text);
+      transition: 0.15s;
+    }
+    .btn:hover { border-color: rgba(34, 211, 238, 0.5); background: rgba(255,255,255,0.05); }
+    .btn.primary { background: var(--cyan); color: #000; border-color: var(--cyan); }
+    .btn.primary:hover { background: #67e8f9; }
+    .btn.danger { color: var(--red); border-color: rgba(239, 68, 68, 0.4); }
+    .btn.danger:hover { background: rgba(239, 68, 68, 0.15); }
+    .btn.amber { background: var(--amber); color: #000; border-color: var(--amber); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green); animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 50% { opacity: 0.5; } }
+    /* Ticker */
+    .ticker {
+      height: 28px; overflow: hidden; position: relative;
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: var(--panel2);
+    }
+    .ticker-inner {
+      display: flex; align-items: center; gap: 32px;
+      white-space: nowrap; height: 100%;
+      animation: scroll 40s linear infinite;
+      font-family: ui-monospace, monospace; font-size: 11px;
+    }
+    @keyframes scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .tabs {
+      max-width: 1600px; margin: 0 auto;
+      padding: 0 12px; display: flex; gap: 4px; overflow-x: auto;
+    }
+    .tabs button {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 16px; height: 36px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--zinc); border-bottom: 2px solid transparent;
+      white-space: nowrap; transition: 0.15s;
+    }
+    .tabs button:hover { color: #d4d4d8; }
+    .tabs button.active {
+      color: #fff; border-bottom-color: var(--cyan); background: var(--panel);
+    }
+    .tabs .badge {
+      background: rgba(34, 211, 238, 0.2); color: var(--cyan);
+      font-size: 10px; padding: 1px 6px; border-radius: 999px;
+    }
+    main { max-width: 1600px; margin: 0 auto; padding: 16px 12px 40px; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; margin-bottom: 16px;
+    }
+    .panel-h {
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+    }
+    .panel-h h2 {
+      font-size: 13px; font-weight: 800; letter-spacing: 0.1em;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-b { padding: 16px; }
+    .grid-2 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    .grid-3 { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    .grid-4 { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+    @media (min-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+      .grid-3 { grid-template-columns: repeat(3, 1fr); }
+      .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    }
+    .tag { display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.05em;border:1px solid var(--border2);background:rgba(255,255,255,.05)}
+    .tag.pos { background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.3);color:#6ee7b7 }
+    .tag.neg { background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.3);color:#fca5a5 }
+    .news-card { background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px;transition:.15s }
+    .news-card:hover { border-color:rgba(34,211,238,.3) }
+    .news-card.launched { opacity:.55; background:rgba(255,255,255,.02) }
+    .news-card .tags { display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px }
+    .news-card h3 { font-size:13px;font-weight:700;line-height:1.3;margin-bottom:10px }
+    .news-actions { display:flex;gap:8px;flex-wrap:wrap }
+    .toast { position:fixed;bottom:16px;right:16px;background:var(--panel);border:1px solid var(--border2);padding:10px 14px;border-radius:10px;font-size:12px;z-index:99;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+    .ficha { background:var(--panel2);border:1px solid var(--border);border-radius:12px;overflow:hidden }
+    .ficha-head { padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border) }
+    .ficha-logo { width:36px;height:36px;border-radius:8px;display:grid;place-items:center;font-weight:900;color:#000 }
+    .ficha-body { padding:14px 16px }
+    .ficha-meta { display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px }
+    .ficha-meta div { background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px }
+    .ficha-meta small { display:block;font-size:9px;color:var(--zinc);letter-spacing:.08em;text-transform:uppercase }
+    .ficha-meta strong { font-size:12px }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<dialog id="modal-reset" style="border:none;background:transparent;max-width:420px;width:90%;margin:auto">
+  <div class="panel" style="margin:0">
+    <div class="panel-h"><h2>¿Resetear partida?</h2></div>
+    <div class="panel-b">
+      <p class="mono" style="font-size:12px;color:var(--muted)">Borra jugadores, operaciones, precios y rehabilita las 18 noticias. No se puede deshacer.</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+        <button class="btn" id="btn-cancel-reset">Cancelar</button>
+        <button class="btn danger" id="btn-confirm-reset">Resetear</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* ─── LS helper ─── */
+const LS = {
+  get(k, d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d }catch{ return d } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)) }catch{} }
+};
+
+/* ─── Data base ─── */
+const COLORS = { TUNA: '#22d3ee', CUTI: '#fb923c', ALGB: '#a3e635' };
+const TICKERS = ['TUNA','CUTI','ALGB'];
+const COMPANY = {
+  TUNA:{nombre:"TUNA S.A.", sector:"Tecnología", color:"#22d3ee", cap:"$820M", desc:"Fabricante del iTuna Phone, dispositivo hecho con tuna del monte santiagueño.", pe:"18.2x", crecimiento:"+22%", dividendo:"1.2%", vol:"Alta", riesgo:"Medio"},
+  CUTI:{nombre:"CutiBurguer S.A.", sector:"Gastronomía", color:"#fb923c", cap:"$340M", desc:"Cadena de hamburguesas artesanales con carne de monte.", pe:"14.5x", crecimiento:"+12%", dividendo:"2.8%", vol:"Media", riesgo:"Bajo"},
+  ALGB:{nombre:"Algarrobo.com", sector:"E-commerce", color:"#a3e635", cap:"$1100M", desc:"Marketplace de productos de algarrobo.", pe:"32.1x", crecimiento:"+45%", dividendo:"0%", vol:"Muy Alta", riesgo:"Alto"},
+};
+
+const RAW_NEWS_V3 = [
+  ['TunaPad bate récord de preventas','TUNA',8],
+  ['TUNA firma exportación regional','TUNA',10],
+  ['Polo de innovación conjunto','TUNA',10,'ALGB',5],
+  ['Falta de componentes frena producción','TUNA',-8],
+  ['Fallas de batería en último lote','TUNA',-10],
+  ['Aranceles a componentes electrónicos','TUNA',-6],
+  ['Achalay Burger, sabor del año','CUTI',6],
+  ['CutiBurguer abre 15 sucursales','CUTI',8],
+  ['Alianza de delivery con Algarrobo','CUTI',8,'ALGB',5],
+  ['Sube el precio de la carne','CUTI',-8],
+  ['Escándalo sanitario en una sucursal','CUTI',-10],
+  ['Paro de transportistas','CUTI',-6,'ALGB',-4],
+  ['Nueva ruta comercial al norte','ALGB',8],
+  ['Récord de ventas CyberLunes','ALGB',10],
+  ['Línea co-branded con TUNA','ALGB',8,'TUNA',5],
+  ['Temporal corta ruta nacional','ALGB',-8],
+  ['Demoras afectan la reputación','ALGB',-6],
+  ['Competidor extra-regional','ALGB',-10]
+];
+
+function buildNewsFromV3(){
+  return RAW_NEWS_V3.map((row, idx)=>{
+    const title=row[0]; const effects=[];
+    for(let i=1;i<row.length;i+=2) effects.push({ticker:row[i], pct:row[i+1]});
+    const avg=effects.reduce((s,e)=>s+e.pct,0)/effects.length;
+    let impacto=avg>0 && avg<8?"Positivo":avg>=8?"Positivo Fuerte":avg<0 && avg>-8?"Negativo":avg<=-8?"Bomba":"Neutro";
+    return {id: idx+1, idStr:`n${idx+1}`, title, ticker:effects.length===1?effects[0].ticker:"MERCADO", effects, efectoPct:effects[0]?.pct||0, impacto, round:Math.min(10, Math.floor(idx)+1), descripcion:effects.map(e=>`${e.ticker} ${e.pct>0?'+':''}${e.pct}%`).join(' · ')+` — ${title}.`, launched:false}
+  })
+}
+const NEWS_SEED = buildNewsFromV3();
+
+/* ─── NUEVO: Links para popup — SOLO ESTO SE AGREGA ─── */
+const DEFAULT_LINKS = {
+  n1:"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  n2:"https://www.youtube.com/watch?v=jNQXAC9IVRw",
+  n3:"https://www.youtube.com/watch?v=9bZkp7q19f0",
+  n4:"https://www.youtube.com/results?search_query=TUNA+falta+componentes",
+  n5:"https://www.youtube.com/results?search_query=TUNA+bateria+falla",
+  n6:"https://www.youtube.com/results?search_query=aranceles+componentes+electronicos+Argentina",
+  n7:"https://www.youtube.com/results?search_query=Achalay+Burger+premio",
+  n8:"https://www.youtube.com/results?search_query=CutiBurguer+expansion",
+  n9:"https://www.youtube.com/results?search_query=delivery+algarrobo+alianza",
+  n10:"https://www.youtube.com/results?search_query=precio+carne+Argentina+suba",
+  n11:"https://www.youtube.com/results?search_query=escandalo+sanitario+gastronomia",
+  n12:"https://www.youtube.com/results?search_query=paro+transportistas+Santiago+del+Estero",
+  n13:"https://www.youtube.com/results?search_query=nueva+ruta+comercial+norte+Argentina",
+  n14:"https://www.youtube.com/results?search_query=CyberLunes+record+ventas+2024",
+  n15:"https://www.youtube.com/results?search_query=co+branded+TUNA+ALGB",
+  n16:"https://www.youtube.com/results?search_query=temporal+ruta+nacional+corte",
+  n17:"https://www.youtube.com/results?search_query=demoras+logistica+reputacion",
+  n18:"https://www.youtube.com/results?search_query=competidor+extra+regional+ecommerce"
+};
+
+function defaultPrices(){
+  return Array.from({length: 10}, (_, i) => ({
+    round: i + 1,
+    TUNA: i === 0 ? 200 : null,
+    CUTI: i === 0 ? 100 : null,
+    ALGB: i === 0 ? 250 : null
+  }));
+}
+
+function normalizePrices(saved){
+  const defaults = defaultPrices();
+
+  if (Array.isArray(saved)) {
+    return defaults.map((row, i) => ({
+      ...row,
+      ...(saved[i] || {})
+    }));
+  }
+
+  if (saved && typeof saved === 'object') {
+    return defaults.map((row, i) => ({
+      ...row,
+      ...(saved[i + 1] || saved[String(i + 1)] || {})
+    }));
+  }
+
+  return defaults;
+}
+
+function price(r, t){ 
+  const row = state.prices[r - 1];
+  if(row && row[t] != null && row[t] !== '') {
+    return Number(row[t]);
+  }
+  for(let i = r - 1; i >= 1; i--){
+    const previous = state.prices[i - 1];
+    if(previous && previous[t] != null && previous[t] !== '') {
+      return Number(previous[t]);
+    }
+  }
+  return {TUNA: 200, CUTI: 100, ALGB: 250}[t] || 100;
+}
+function formatMoney(n){ return '$'+Number(n||0).toLocaleString('es-AR'); }
+function formatMoney2(n){ return '$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2}); }
+
+/* ─── State ─── */
+const state = {
+  round: LS.get('mm_round', 1),
+  tab: 'NOTICIAS',
+  prices: normalizePrices(LS.get('mm_prices', null)),
+  players: LS.get('mm_players', [
+    { id: 'p1', name: 'Santiago', capital: 10000 },
+    { id: 'p2', name: 'La Banda Trader', capital: 15000 },
+    { id: 'p3', name: 'Fondo Algarrobo', capital: 20000 }
+  ]),
+  operations: LS.get('mm_operations', [
+    { id: 'o1', round: 1, player: 'Santiago', ticker: 'TUNA', type: 'Compra', quantity: 10, price: 200 }
+  ]),
+  newsLinks: LS.get('mm_news_links', DEFAULT_LINKS),
+  news: (() => {
+    const saved = LS.get('mm_news', null);
+    if (!saved) return NEWS_SEED.map(n => ({ ...n }));
+    return NEWS_SEED.map(base => {
+      const s = saved.find(x => (x.id===base.id || x.idStr===base.idStr));
+      return { ...base, launched: s ? !!s.launched : false };
+    });
+  })(),
+  log: LS.get('mm_log', [])
+};
+
+function persist(){
+  LS.set('mm_round', state.round);
+  LS.set('mm_prices', state.prices);
+  LS.set('mm_players', state.players);
+  LS.set('mm_operations', state.operations);
+  LS.set('mm_news', state.news);
+  LS.set('mm_news_links', state.newsLinks);
+  LS.set('mm_log', state.log);
+}
+function addLog(msg, tipo='INFO'){
+  state.log.unshift({ts:new Date().toLocaleTimeString(), msg, tipo});
+  if(state.log.length>120) state.log.pop();
+  persist();
+}
+function showToast(msg){
+  let t=document.createElement('div'); t.className='toast mono'; t.textContent=msg;
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 2500);
+}
+
+/* ─── CORRECCIÓN POPUP: solo estas 2 funciones ─── */
+function openNewsPopup(newsId){
+  // newsId puede venir como 5 o como "n5" o como "5"
+  let key = typeof newsId === 'number' ? `n${newsId}` : String(newsId);
+  if(!key.startsWith('n')) key = `n${key}`;
+  const url = state.newsLinks[key] || DEFAULT_LINKS[key];
+  if(!url) return;
+  // window.open sincrónico = popup real, no pestaña bloqueada
+  const w = window.open(url, `news_${key}`, "width=1024,height=700,left=200,top=80,menubar=no,toolbar=no,location=no,status=no,scrollbars=yes,resizable=yes,popup=yes");
+  if(!w) showToast('Popup bloqueado — habilitá popups para este sitio');
+  addLog(`🔗 Popup: ${key} → ${url}`, 'LINK');
+}
+
+function launchNews(id) {
+  const nid = typeof id === 'string' && id.startsWith('n')
+    ? Number(id.slice(1))
+    : Number(id);
+
+  const news = state.news.find(n => n.id === nid);
+  if (!news || news.launched) return;
+
+  const currentRound = state.round;
+  const currentRow = state.prices[currentRound - 1];
+
+  news.effects.forEach(effect => {
+    const ticker = effect.ticker;
+    const pct = Number(effect.pct);
+
+    // Precio base de la ronda actual
+    const currentRow = state.prices[currentRound - 1];
+  const currentPrice = currentRow[ticker] == null || currentRow[ticker] === ''
+ ? price(currentRound, ticker)
+ : Number(currentRow[ticker]);
+
+    // Aplicar el efecto completo a la ronda actual
+    currentRow[ticker] = Math.round(currentPrice * (1 + pct / 100));
+  });
+
+  news.launched = true;
+
+  addLog(
+    `📰 R${currentRound} Lanzada: ${news.title} (${news.effects
+      .map(e => `${e.ticker} ${e.pct > 0 ? '+' : ''}${e.pct}%`)
+      .join(', ')})`,
+    'NOTICIA'
+  );
+
+  openNewsPopup(news.id);
+
+  if (state.round < 10) {
+    state.round++;
+
+    const nextRow = state.prices[state.round - 1];
+
+    TICKERS.forEach(ticker => {
+      if (nextRow[ticker] == null || nextRow[ticker] === '') {
+        nextRow[ticker] = price(state.round - 1, ticker);
+      }
+    });
+  }
+
+  persist();
+  render();
+  showToast(`Noticia R${currentRound} lanzada + popup`);
+}
+
+function applyShock(ticker, pct){
+  for(let r=state.round;r<=10;r++){
+    const row=state.prices[r-1];
+    if(!row) continue;
+    const cur=row[ticker]==null?price(r,ticker):Number(row[ticker]);
+    row[ticker]=Math.round(cur*(1+pct/100));
+  }
+  addLog(`Shock ${ticker} ${pct>0?'+':''}${pct}% desde R${state.round}`, 'SHOCK');
+  persist(); render(); showToast(`Shock ${ticker} ${pct}%`);
+}
+
+function randomWalk(){
+  const prof={TUNA:0.02,CUTI:0.01,ALGB:0.03};
+  for(let r=state.round+1;r<=10;r++){
+    const prev=state.prices[r-2];
+    const cur=state.prices[r-1];
+    TICKERS.forEach(t=>{
+      const base=prev[t]!=null?Number(prev[t]):price(r-1,t);
+      const vol = (Math.random()-0.5)*0.12;
+      cur[t]=Math.max(10, Math.round(base*(1+prof[t]+vol)));
+    });
+  }
+  addLog('Random Walk generado','INFO');
+  persist(); render(); showToast('Random Walk');
+}
+function calculatePlayers() {
+  return state.players.map(player => {
+    let cash = Number(player.capital);
+    const holdings = Object.fromEntries(TICKERS.map(t => [t, 0]));
+    state.operations.forEach(op => {
+      if (op.player !== player.name || op.round > state.round) return;
+      const total = Number(op.quantity) * Number(op.price);
+      if (op.type === 'Compra') {
+        cash -= total;
+        holdings[op.ticker] += Number(op.quantity);
+      } else {
+        cash += total;
+        holdings[op.ticker] -= Number(op.quantity);
+      }
+    });
+    const portfolio = TICKERS.reduce((s, t) => s + holdings[t] * price(state.round, t), 0);
+    const total = cash + portfolio;
+    const rendimiento = player.capital ? ((total / player.capital) - 1) * 100 : 0;
+    return { ...player, holdings, cash, portfolio, total, rendimiento };
+  });
+}
+
+/* ─── Renders (igual que v4, sin cambios) ─── */
+function renderHeader() {
+  // =========================================================
+  // TICKER: funcionalidad del primer código
+  // pero conservando el formato visual del segundo
+  // =========================================================
+
+  const tickerItems = TICKERS.map(t => {
+    const cur = price(state.round, t);
+
+    const prev = state.round > 1
+      ? price(state.round - 1, t)
+      : cur;
+
+    const chg = prev
+      ? ((cur - prev) / prev) * 100
+      : 0;
+
+    return `
+      <span class="ticker-item"
+            style="display:inline-flex;align-items:center;gap:8px;margin-right:18px;white-space:nowrap;">
+
+        <b style="color:${COLORS[t]}">
+          ${t}
+        </b>
+
+        <span>
+          ${formatMoney2(cur)}
+        </span>
+
+        <span class="${chg >= 0 ? 'up' : 'down'}">
+          ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%
+        </span>
+
+      </span>
+    `;
+  }).join('');
+
+  // =========================================================
+  // HTML DEL HEADER
+  // Se conserva el formato/estructura del segundo código
+  // =========================================================
+
+  const html = `
+    <header class="header">
+
+      <div class="header-top">
+
+        <div class="brand">
+          <div class="logo">MM</div>
+
+          <div>
+            <h1>MARKET MAKER COMMAND CENTER</h1>
+
+            <div class="sub">
+              SANTIAGO DEL ESTERO · SIMULADOR BURSÁTIL · V4.2 POPUP
+            </div>
+          </div>
+        </div>
+
+
+        <div class="toolbar">
+
+          <span class="round-badge mono">
+            R${state.round}/10
+          </span>
+
+          <button class="btn" id="btn-prev">
+            ◀
+          </button>
+
+          <button class="btn" id="btn-next">
+            ▶
+          </button>
+
+          <span class="status-dot"></span>
+
+          <button class="btn" id="btn-reset">
+            RESET
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- ===================================================
+           TICKER
+           Se duplica varias veces para mantener la animación
+           =================================================== -->
+
+      <div class="ticker">
+
+        <div class="ticker-inner">
+
+          <span>
+            ${tickerItems}
+            <span style="color:#52525b;margin-right:18px;">
+              — SANTIAGO DEL ESTERO EXCHANGE —
+            </span>
+          </span>
+
+          <span>
+            ${tickerItems}
+            <span style="color:#52525b;margin-right:18px;">
+              — SANTIAGO DEL ESTERO EXCHANGE —
+            </span>
+          </span>
+
+          <span>
+            ${tickerItems}
+            <span style="color:#52525b;margin-right:18px;">
+              — SANTIAGO DEL ESTERO EXCHANGE —
+            </span>
+          </span>
+
+          <span>
+            ${tickerItems}
+            <span style="color:#52525b;margin-right:18px;">
+              — SANTIAGO DEL ESTERO EXCHANGE —
+            </span>
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <!-- ===================================================
+           TABS
+           Se mantiene exactamente la estructura del segundo
+           =================================================== -->
+
+      <div class="tabs">
+
+        <button
+          data-tab="NOTICIAS"
+          class="${state.tab === 'NOTICIAS' ? 'active' : ''}">
+
+          NOTICIAS
+
+          <span class="badge">
+            ${state.news.filter(n => !n.launched).length}
+          </span>
+
+        </button>
+
+
+        <button
+          data-tab="PRECIOS"
+          class="${state.tab === 'PRECIOS' ? 'active' : ''}">
+
+          PRECIOS
+
+        </button>
+
+
+        <button
+          data-tab="JUGADORES"
+          class="${state.tab === 'JUGADORES' ? 'active' : ''}">
+
+          JUGADORES
+
+        </button>
+
+
+        <button
+          data-tab="OPERACIONES"
+          class="${state.tab === 'OPERACIONES' ? 'active' : ''}">
+
+          OPERACIONES
+
+        </button>
+
+
+        <button
+          data-tab="DASHBOARD"
+          class="${state.tab === 'DASHBOARD' ? 'active' : ''}">
+
+          DASHBOARD
+
+        </button>
+
+
+        <button
+          data-tab="FICHAS"
+          class="${state.tab === 'FICHAS' ? 'active' : ''}">
+
+          FICHAS
+
+        </button>
+
+      </div>
+
+    </header>
+  `;
+
+
+  // =========================================================
+  // INSERTAR / ACTUALIZAR HEADER
+  // =========================================================
+
+  let el = document.getElementById('header-root');
+
+  if (!el) {
+
+    document
+      .getElementById('app')
+      .insertAdjacentHTML(
+        'beforebegin',
+        `<div id="header-root">${html}</div>`
+      );
+
+  } else {
+
+    el.innerHTML = html;
+
+  }
+}
+function renderTabs(){ renderHeader(); }
+
+function renderNews(){
+  const pending = state.news.filter(n=>!n.launched).length;
+  document.getElementById('app').innerHTML = `
+    <div class="panel">
+      <div class="panel-h">
+        <h2><span style="color:var(--red)">●</span> COLA DE NOTICIAS — ${state.news.length} items</h2>
+        <span class="mono" style="font-size:11px;color:var(--zinc)">Ronda actual: R${state.round} · ${pending} pendientes · popup activado</span>
+      </div>
+      <div class="panel-b">
+        <p class="mono" style="font-size:12px;color:var(--muted);margin-bottom:16px">
+          Al lanzar una noticia se aplican los efectos de precio en la ronda actual, se deshabilita la noticia,
+          se abre el link en popup y el juego avanza automáticamente a la siguiente ronda. Las valuaciones de cartera y patrimonio se recalculan solas.
+        </p>
+        <div class="grid-2" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr))">
+          ${state.news.map(n => {
+            const tags = n.effects.map(e =>
+              `<span class="tag ${e.pct >= 0 ? 'pos' : 'neg'}">${e.ticker} ${e.pct > 0 ? '+' : ''}${e.pct}%</span>`
+            ).join('');
+            const key = n.idStr;
+            const url = state.newsLinks[key] || DEFAULT_LINKS[key] || '';
+            return `
+              <article class="news-card ${n.launched ? 'launched' : ''}">
+                <div class="body">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div class="tags" style="display:flex;gap:6px;flex-wrap:wrap">${tags} ${n.launched ? '<span class="tag" style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3);color:#6ee7b7">✓ Lanzada</span>' : ''}</div>
+                    <span class="mono" style="font-size:10px;color:var(--zinc)">R${n.round} · ${n.impacto}</span>
+                  </div>
+                  <h3>${n.title}</h3>
+                  <div class="mono" style="font-size:10px;color:var(--zinc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:8px 0">${url}</div>
+                  <div class="news-actions">
+                    <button class="btn ${n.launched ? '' : 'primary'}" data-launch="${n.id}" ${n.launched ? 'disabled' : ''}>
+                      ${n.launched ? '✓ Ya lanzada' : '▶ Lanzar'}
+                    </button>
+                    <button class="btn" data-open="${n.id}">🔗 Sólo ver</button>
+                  </div>
+                </div>
+              </article>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  // listeners para popup — deben estar dentro del click sincrónico
+  document.querySelectorAll('[data-launch]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = e.currentTarget.dataset.launch;
+      launchNews(Number(id));
+    });
+  });
+  document.querySelectorAll('[data-open]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = e.currentTarget.dataset.open;
+      openNewsPopup(Number(id));
+    });
+  });
+}
+
+function renderPrices() {
+  const players = calculatePlayers();
+  document.getElementById('app').innerHTML = `
+    <div class="grid-2 grid-prices">
+      <div class="panel">
+        <div class="panel-h">
+          <h2 style="color:var(--cyan)">PRECIOS POR RONDA</h2>
+          <button class="btn" id="btn-rw">Random Walk</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="mono" style="font-size:12px">
+            <thead>
+              <tr>
+                <th>RONDA</th>
+                ${TICKERS.map(t => `<th><span class="ticker-dot" style="background:${COLORS[t]}"></span>${t}</th>`).join('')}
+                <th>SHOCKS R${state.round}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${state.prices.map(row => {
+                const isCur = row.round === state.round;
+                return `<tr style="${isCur ? 'background:rgba(6,182,212,0.06)' : ''}">
+                  <td style="font-weight:700;color:${isCur ? 'var(--cyan)' : 'var(--zinc)'}">${isCur ? '▶ R' + row.round : 'R' + row.round}</td>
+                  ${TICKERS.map(t => `
+                    <td>
+                      <input class="price-input mono" type="number" data-price="${row.round}:${t}"
+                        value="${row[t] != null ? row[t] : ''}" placeholder="${price(row.round, t)}">
+                    </td>`).join('')}
+                  <td>
+                    ${isCur ? `
+                      <div class="shock-btns">
+                        ${[-15, -5, 5, 15, -30, 30].map(p =>
+                          `<button data-shock="TUNA:${p}" style="${p < 0 ? 'color:var(--red)' : 'color:var(--green)'}">${p > 0 ? '+' : ''}${p}% T</button>`
+                        ).join('')}
+                      </div>` : ''}
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px;border-top:1px solid var(--border);background:var(--panel2);display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+          ${TICKERS.map(t => `
+            <div style="border:1px solid ${COLORS[t]}40;background:${COLORS[t]}0A;border-radius:8px;padding:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+              <div>
+                <div class="mono" style="font-size:10px;color:var(--zinc)">${t}</div>
+                <div class="mono" style="font-weight:700;font-size:14px">${formatMoney2(price(state.round, t))}</div>
+              </div>
+              <div class="shock-btns">
+                ${[15, 5, -5, -15].map(p => `<button data-shock="${t}:${p}">${p > 0 ? '+' : ''}${p}%</button>`).join('')}
+                <button data-shock="${t}:-30" style="color:var(--red)">Crash</button>
+                <button data-shock="${t}:30" style="color:var(--green)">Moon</button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel">
+          <div class="panel-h"><h2>EVOLUCIÓN PRECIOS</h2></div>
+          <div class="panel-b">
+            <div style="display:flex;gap:12px;margin-bottom:12px" class="mono" style="font-size:10px">
+              ${TICKERS.map(t => `<span style="display:flex;align-items:center;gap:4px"><span class="ticker-dot" style="background:${COLORS[t]}"></span>${t}</span>`).join('')}
+            </div>
+            <div style="overflow-x:auto">
+              <table class="mono" style="font-size:11px">
+                <thead><tr><th>R</th>${TICKERS.map(t => `<th class="num">${t}</th>`).join('')}</tr></thead>
+                <tbody>
+                  ${state.prices.map(r => `<tr>
+                    <td>${r.round === state.round ? '▶' : ''} R${r.round}</td>
+                    ${TICKERS.map(t => {
+                      const v = price(r.round, t);
+                      const prev = r.round > 1 ? price(r.round - 1, t) : v;
+                      const chg = prev ? ((v - prev) / prev) * 100 : 0;
+                      return `<td class="num ${chg > 0 ? 'up' : chg < 0 ? 'down' : ''}">${formatMoney2(v)}</td>`;
+                    }).join('')}
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h2>LOG MARKET MAKER</h2></div>
+          <div class="panel-b mono" style="max-height:200px;overflow:auto;font-size:11px">
+            ${state.log.length ? state.log.map(l => `
+              <div class="log-line">
+                <span class="ts">${l.ts}</span>
+                <span style="color:${l.tipo === 'SHOCK' ? 'var(--amber)' : l.tipo === 'NOTICIA' ? 'var(--cyan)' : 'var(--text)'}">${l.msg}</span>
+              </div>`).join('') : '<div class="empty">Sin eventos aún</div>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPlayers() {
+  const players = calculatePlayers().sort((a, b) => b.total - a.total);
+  document.getElementById('app').innerHTML = `
+    <div class="panel">
+      <div class="panel-h"><h2>AGREGAR JUGADOR</h2></div>
+      <div class="panel-b">
+        <form id="player-form" class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>NOMBRE JUGADOR</label>
+            <input name="name" placeholder="Ej: Doña Tuna" required>
+          </div>
+          <div class="form-group">
+            <label>CAPITAL INICIAL</label>
+            <input name="capital" type="number" value="10000" min="0">
+          </div>
+          <div class="form-group" style="flex:0;align-self:flex-end">
+            <button class="btn primary" type="submit">+ Agregar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-h">
+        <h2>TABLA PATRIMONIAL R${state.round} — CÁLCULO AUTOMÁTICO</h2>
+        <span class="mono" style="font-size:10px;color:var(--zinc)">Efectivo = Cap + Σ(Ventas−Compras) · Valor = Σ Acc×PrecioR · Patrimonio = Efectivo+Valor</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="mono" style="font-size:12px">
+          <thead>
+            <tr>
+              <th>Jugador</th><th class="num">Cap Inicial</th><th class="num">Efectivo</th>
+              ${TICKERS.map(t => `<th class="num" style="color:${COLORS[t]}">${t}</th>`).join('')}
+              <th class="num">Valor Cartera</th><th class="num">Patrimonio</th><th class="num">% Rend</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${players.map(p => `
+              <tr>
+                <td style="font-weight:700">${p.name}</td>
+                <td class="num" style="color:var(--zinc)">${formatMoney2(p.capital)}</td>
+                <td class="num">${formatMoney2(p.cash)}</td>
+                ${TICKERS.map(t => `<td class="num" style="color:${COLORS[t]}">${p.holdings[t]}</td>`).join('')}
+                <td class="num">${formatMoney2(p.portfolio)}</td>
+                <td class="num" style="font-weight:700">${formatMoney2(p.total)}</td>
+                <td class="num ${p.rendimiento >= 0 ? 'up' : 'down'}" style="font-weight:700">${p.rendimiento >= 0 ? '+' : ''}${p.rendimiento.toFixed(2)}%</td>
+                <td><button class="btn danger" data-del-player="${p.id}" style="padding:4px 8px">✕</button></td>
+              </tr>`).join('') || '<tr><td colspan="10" class="empty">Sin jugadores</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderOperations() {
+  const players = state.players;
+  document.getElementById('app').innerHTML = `
+    <div class="grid-2 grid-ops">
+      <div class="panel" style="height:fit-content">
+        <div class="panel-h"><h2>CARGA RÁPIDA</h2></div>
+        <div class="panel-b">
+          <form id="op-form">
+            <div class="form-group">
+              <label>RONDA</label>
+              <select name="round">${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${i+1===state.round?'selected':''}>R${i+1}</option>`).join('')}</select>
+            </div>
+            <div class="form-group">
+              <label>JUGADOR</label>
+              <select name="player" required>
+                <option value="">Seleccionar…</option>
+                ${players.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>EMPRESA</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                ${TICKERS.map(t => `
+                  <label style="display:flex;align-items:center;justify-content:center;padding:10px;border:1px solid var(--border2);border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;color:${COLORS[t]}">
+                    <input type="radio" name="ticker" value="${t}" ${t==='TUNA'?'checked':''} style="display:none">
+                    ${t}
+                  </label>`).join('')}
+              </div>
+            </div>
+            <div class="form-group">
+              <label>TIPO</label>
+              <select name="type"><option>Compra</option><option>Venta</option></select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>CANTIDAD</label>
+                <input name="quantity" type="number" min="1" value="1">
+              </div>
+              <div class="form-group">
+                <label>PRECIO UNIT</label>
+                <input name="price" type="number" min="0" step="0.01" placeholder="Actual">
+              </div>
+            </div>
+            <button class="btn primary" type="submit" style="width:100%;justify-content:center;height:40px">Ejecutar Operación</button>
+          </form>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>LIBRO DE OPERACIONES</h2></div>
+        <div style="overflow-x:auto">
+          <table class="mono" style="font-size:12px">
+            <thead>
+              <tr><th>Ronda</th><th>Jugador</th><th>Empresa</th><th>Tipo</th><th class="num">Cant</th><th class="num">Precio</th><th class="num">Total</th><th></th></tr>
+            </thead>
+            <tbody>
+              ${[...state.operations].reverse().map(o => {
+                const total = o.quantity * o.price;
+                return `<tr>
+                  <td>R${o.round}</td>
+                  <td style="font-weight:700">${o.player}</td>
+                  <td><span style="color:${COLORS[o.ticker]};border:1px solid ${COLORS[o.ticker]}60;padding:2px 6px;border-radius:4px;font-size:10px">${o.ticker}</span></td>
+                  <td><span style="padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;${o.type==='Compra'?'background:rgba(239,68,68,0.2);color:#fca5a5':'background:rgba(16,185,129,0.2);color:#6ee7b7'}">${o.type}</span></td>
+                  <td class="num">${o.quantity}</td>
+                  <td class="num">${formatMoney2(o.price)}</td>
+                  <td class="num" style="font-weight:700">${formatMoney2(total)}</td>
+                  <td><button class="btn danger" data-del-op="${o.id}" style="padding:4px 8px">✕</button></td>
+                </tr>`;
+              }).join('') || '<tr><td colspan="8" class="empty">Sin operaciones</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Radio styling
+  document.querySelectorAll('#op-form input[type=radio]').forEach(r => {
+    const label = r.parentElement;
+    if (r.checked) { label.style.background = '#fff'; label.style.color = '#000'; label.style.borderColor = '#fff'; }
+    r.addEventListener('change', () => {
+      document.querySelectorAll('#op-form input[type=radio]').forEach(x => {
+        const l = x.parentElement;
+        if (x.checked) { l.style.background = '#fff'; l.style.color = '#000'; l.style.borderColor = '#fff'; }
+        else { l.style.background = ''; l.style.color = COLORS[x.value]; l.style.borderColor = ''; }
+      });
+    });
+  });
+}
+
+function renderDashboard() {
+  const players = calculatePlayers().sort((a, b) => b.total - a.total);
+  const totalCap = players.reduce((s, p) => s + p.capital, 0);
+  const totalCash = players.reduce((s, p) => s + p.cash, 0);
+  const totalPort = players.reduce((s, p) => s + p.portfolio, 0);
+  const totalPat = players.reduce((s, p) => s + p.total, 0);
+  const conc = TICKERS.map(t => ({
+    name: t,
+    value: players.reduce((s, p) => s + p.holdings[t] * price(state.round, t), 0),
+    color: COLORS[t]
+  }));
+
+  document.getElementById('app').innerHTML = `
+    <div class="grid-4" style="margin-bottom:16px">
+      <div class="stat"><small>CAPITAL TOTAL</small><strong>${formatMoney(totalCap)}</strong><div class="sub">En juego</div></div>
+      <div class="stat"><small>EFECTIVO TOTAL</small><strong>${formatMoney(totalCash)}</strong><div class="sub">${totalPat ? ((totalCash / totalPat) * 100).toFixed(1) : 0}% liquidez</div></div>
+      <div class="stat"><small>VALOR MERCADO</small><strong>${formatMoney(totalPort)}</strong><div class="sub">Carteras</div></div>
+      <div class="stat"><small>PATRIMONIO TOTAL</small><strong>${formatMoney(totalPat)}</strong><div class="sub">Líder: ${players[0]?.name || '—'}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-h"><h2>RANKING PATRIMONIO</h2></div>
+        <div class="panel-b">
+          ${players.map((p, i) => `
+            <div class="rank-row">
+              <b>${i + 1}. ${p.name}</b>
+              <div style="text-align:right">
+                <strong class="mono">${formatMoney2(p.total)}</strong>
+                <div class="mono ${p.rendimiento >= 0 ? 'up' : 'down'}" style="font-size:11px">${p.rendimiento >= 0 ? '+' : ''}${p.rendimiento.toFixed(2)}%</div>
+              </div>
+            </div>`).join('') || '<div class="empty">Sin jugadores</div>'}
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-h"><h2>CONCENTRACIÓN POR TICKER</h2></div>
+        <div class="panel-b">
+          ${conc.map(c => {
+            const pct = totalPort ? (c.value / totalPort * 100) : 0;
+            return `
+              <div style="margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px" class="mono" style="font-size:12px">
+                  <span style="color:${c.color}">${c.name}</span>
+                  <span>${formatMoney(c.value)} (${pct.toFixed(0)}%)</span>
+                </div>
+                <div style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden">
+                  <div style="height:100%;width:${pct}%;background:${c.color};border-radius:4px"></div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFichas() {
+  document.getElementById('app').innerHTML = `
+    <div class="grid-3">
+      ${TICKERS.map(t => {
+        const c = COMPANY[t];
+        return `
+          <div class="ficha" style="border-color:${COLORS[t]}30">
+            <div class="bar" style="background:${COLORS[t]}"></div>
+            <div class="inner">
+              <div style="display:flex;justify-content:space-between;align-items:start">
+                <div>
+                  <div class="mono" style="font-size:10px;color:var(--zinc);letter-spacing:0.1em">${c.sector}</div>
+                  <h3 style="font-size:18px;font-weight:900;margin-top:4px">${c.nombre}</h3>
+                  <div class="mono" style="font-size:12px;color:${COLORS[t]};margin-top:4px">${t}</div>
+                </div>
+                <div style="width:40px;height:40px;border-radius:8px;background:${COLORS[t]};color:#000;font-weight:900;display:grid;place-items:center">${t[0]}</div>
+              </div>
+              <p class="mono" style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5">${c.desc}</p>
+              <div class="ficha-meta">
+                ${[['Cap', c.cap], ['P/E', c.pe], ['Crec.', c.crecimiento], ['Div', c.dividendo], ['Vol', c.vol], ['Riesgo', c.riesgo]].map(([k, v]) => `
+                  <div><small>${k}</small><strong>${v}</strong></div>`).join('')}
+              </div>
+              <div style="margin-top:14px;padding:12px;border:1px dashed var(--border2);border-radius:8px;background:var(--bg)">
+                <div class="mono" style="font-size:10px;color:var(--zinc)">CERTIFICADO REPRESENTATIVO</div>
+                <div style="font-weight:700;font-size:12px;margin-top:6px">TÍTULO ACCIONARIO — ${t}</div>
+                <div class="mono" style="font-size:10px;color:var(--zinc);margin-top:4px">Emitido por Bolsa Santiagueña · 1 acción = 1 voto</div>
+                <div class="mono" style="font-size:10px;margin-top:8px;display:flex;justify-content:space-between">
+                  <span>Precio R${state.round}: ${formatMoney2(price(state.round, t))}</span>
+                  <span style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px">Nº ${t}-${Math.floor(Math.random()*900+100)}</span>
+                </div>
+              </div>
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="panel-h"><h2>REGLAS MARKET MAKER</h2></div>
+      <div class="panel-b" style="display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));font-size:12px;color:var(--muted);line-height:1.6">
+        <div><div style="color:#fff;font-weight:700;margin-bottom:4px">Precios por ronda</div>10 filas. R1 = 200/100/250. Editable. Shocks y noticias aplican a la ronda actual. Random Walk genera volatilidad por perfil.</div>
+        <div><div style="color:#fff;font-weight:700;margin-bottom:4px">Jugadores & Operaciones</div>Efectivo = CapInicial + Σ ventas − Σ compras hasta R actual. Acc = compras−ventas. Valor = Σ acc×precioR. Patrimonio = efectivo+valor. Rend = pat/cap−1.</div>
+        <div><div style="color:#fff;font-weight:700;margin-bottom:4px">Noticias</div>Al lanzar: se actualizan precios de la ronda, la noticia queda deshabilitada hasta RESET, y el juego avanza automáticamente a la siguiente ronda. Patrimonio se recalcula solo.</div>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  renderHeader();
+  ({
+    NOTICIAS: renderNews,
+    PRECIOS: renderPrices,
+    JUGADORES: renderPlayers,
+    OPERACIONES: renderOperations,
+    DASHBOARD: renderDashboard,
+    FICHAS: renderFichas
+  }[state.tab] || renderNews)();
+}
+
+/* ─── Events ─── */
+document.addEventListener('click', e => {
+  const tab = e.target.closest('[data-tab]');
+  if (tab) { state.tab = tab.dataset.tab; render(); return; }
+
+  if (e.target.closest('#btn-prev')) {
+    state.round = Math.max(1, state.round - 1);
+    persist(); render(); return;
+  }
+  if (e.target.closest('#btn-next')) {
+    state.round = Math.min(10, state.round + 1);
+    const row = state.prices[state.round - 1];
+    TICKERS.forEach(t => {
+      if (row[t] == null || row[t] === '') row[t] = price(state.round - 1, t);
+    });
+    persist(); render(); return;
+  }
+  if (e.target.closest('#btn-reset')) {
+    document.getElementById('modal-reset').showModal();
+    return;
+  }
+  if (e.target.closest('#btn-cancel-reset')) {
+    document.getElementById('modal-reset').close();
+    return;
+  }
+  if (e.target.closest('#btn-confirm-reset')) {
+    state.round = 1;
+    state.players = [];
+    state.operations = [];
+    state.prices = defaultPrices();
+    state.news = NEWS_SEED.map(n => ({ ...n, launched: false }));
+    state.log = [];
+    addLog('Partida restablecida', 'INFO');
+    persist();
+    document.getElementById('modal-reset').close();
+    render();
+    showToast('Partida restablecida');
+    return;
+  }
+
+  const launch = e.target.closest('[data-launch]');
+  if (launch) {
+    // IMPORTANTE: llamada sincrónica para que el popup no sea bloqueado
+    launchNews(Number(launch.dataset.launch));
+    return;
+  }
+  const open = e.target.closest('[data-open]');
+  if (open){
+    openNewsPopup(Number(open.dataset.open));
+    return;
+  }
+
+  const shock = e.target.closest('[data-shock]');
+  if (shock) {
+    const [t, p] = shock.dataset.shock.split(':');
+    applyShock(t, Number(p));
+    return;
+  }
+
+  if (e.target.closest('#btn-rw')) {
+    randomWalk();
+    return;
+  }
+
+  const delP = e.target.closest('[data-del-player]');
+  if (delP) {
+    state.players = state.players.filter(p => p.id !== delP.dataset.delPlayer);
+    persist(); render(); return;
+  }
+  const delO = e.target.closest('[data-del-op]');
+  if (delO) {
+    state.operations = state.operations.filter(o => o.id !== delO.dataset.delOp);
+    persist(); render(); return;
+  }
+});
+
+document.addEventListener('change', e => {
+  const input = e.target.closest('[data-price]');
+  if (!input) return;
+  const [round, ticker] = input.dataset.price.split(':');
+  const row = state.prices[Number(round) - 1];
+  row[ticker] = input.value === '' ? null : Number(input.value);
+  persist();
+  renderHeader();
+});
+
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const data = new FormData(e.target);
+
+  if (e.target.id === 'player-form') {
+    const name = String(data.get('name') || '').trim();
+    if (!name) return;
+    state.players.push({
+      id: 'p' + Date.now(),
+      name,
+      capital: Number(data.get('capital')) || 10000
+    });
+    addLog(`Jugador agregado: ${name}`, 'INFO');
+    persist();
+    render();
+    return;
+  }
+
+  if (e.target.id === 'op-form') {
+    const player = data.get('player');
+    if (!player) return;
+    const ticker = data.get('ticker') || 'TUNA';
+    const round = Number(data.get('round')) || state.round;
+    const priceVal = Number(data.get('price')) || price(round, ticker);
+    const qty = Number(data.get('quantity')) || 1;
+    state.operations.push({
+      id: 'o' + Date.now(),
+      round,
+      player,
+      ticker,
+      type: data.get('type') || 'Compra',
+      quantity: qty,
+      price: priceVal
+    });
+    addLog(`Op ${data.get('type')} ${qty} ${ticker} @ ${priceVal} — ${player} (R${round})`, 'INFO');
+    persist();
+    render();
+  }
+});
+
+render();
+</script>
+</body>
+</html>
